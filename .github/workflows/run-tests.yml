@@ -30,7 +30,7 @@ jobs:
         continue-on-error: true
         run: |
           set +e
-          dotnet test Luatrauma.AutoUpdater.sln -clp:"ErrorsOnly;Summary" --logger "trx;LogFileName=$PWD/test-results.trx"
+          dotnet test SteamWorkshopDownloader.sln -clp:"ErrorsOnly;Summary" --logger "trx;LogFileName=$PWD/test-results.trx"
           echo "EXITCODE=$?" >> "$GITHUB_ENV"
 
       - name: Upload test results
