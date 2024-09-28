@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Xml;
-using System.Xml.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace SteamWorkshopDownloader
