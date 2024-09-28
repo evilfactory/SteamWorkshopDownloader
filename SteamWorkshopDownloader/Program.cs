@@ -16,7 +16,9 @@ namespace SteamWorkshopDownloader
 
             var steamCMDPath = new Option<FileInfo?>(name: "--steamcmdpath", description: "The SteamCMD executable.");
             steamCMDPath.IsRequired = true;
-            rootCommand.AddOption(steamCMDPath);
+
+            var steamappsFolder = new Option<DirectoryInfo?>(name: "--steamappsfolder", description: "The SteamApps folder.");
+            steamappsFolder.IsRequired = true;
 
             var gameId = new Option<ulong>(name: "--gameid", description: "The Steam Game ID.");
             gameId.IsRequired = true;
@@ -29,6 +31,7 @@ namespace SteamWorkshopDownloader
             var downloadCollectionCommand = new Command("downloadcollection", "Downloads a Steam Collection.")
             {
                 steamCMDPath,
+                steamappsFolder,
                 collection,
                 gameId,
                 output
@@ -50,10 +53,10 @@ namespace SteamWorkshopDownloader
             rootCommand.AddCommand(btSetConfigPlayer);
 
 
-            downloadCollectionCommand.SetHandler(async (FileInfo? steamcmd, ulong gameId, string collection, DirectoryInfo? outputDirectory) =>
+            downloadCollectionCommand.SetHandler(async (FileInfo? steamcmd, DirectoryInfo? steamappsFolder, ulong gameId, string collection, DirectoryInfo? outputDirectory) =>
             {
-                await DownloadCollection(steamcmd, gameId, collection, outputDirectory ?? new DirectoryInfo(Directory.GetCurrentDirectory()));
-            }, steamCMDPath, gameId, collection, output);
+                await DownloadCollection(steamcmd, steamappsFolder, gameId, collection, outputDirectory ?? new DirectoryInfo(Directory.GetCurrentDirectory()));
+            }, steamCMDPath, steamappsFolder, gameId, collection, output);
 
             btSetConfigPlayer.SetHandler(async (DirectoryInfo? modFolder, FileInfo? configPlayer) =>
             {
@@ -111,7 +114,7 @@ namespace SteamWorkshopDownloader
             configPlayerDoc.Save(configPlayer.FullName);
         }
 
-        public static async Task DownloadCollection(FileInfo steamcmd, ulong gameId, string collection, DirectoryInfo outputDirectory)
+        public static async Task DownloadCollection(FileInfo steamcmd, DirectoryInfo steamappsFolder, ulong gameId, string collection, DirectoryInfo outputDirectory)
         {
             if (collection.StartsWith("https://"))
             {
@@ -151,7 +154,7 @@ namespace SteamWorkshopDownloader
             {
                 try 
                 {
-                    await DownloadItem(gameId, itemIds[i], steamcmd, new DirectoryInfo(Path.Combine(outputDirectory.FullName, itemIds[i].ToString())));
+                    await DownloadItem(gameId, itemIds[i], steamcmd, steamappsFolder, new DirectoryInfo(Path.Combine(outputDirectory.FullName, itemIds[i].ToString())));
                 }
                 catch (Exception exception)
                 {
@@ -160,7 +163,7 @@ namespace SteamWorkshopDownloader
             }
         }
 
-        public static async Task DownloadItem(ulong gameId, ulong itemId, FileInfo steamcmd, DirectoryInfo directory)
+        public static async Task DownloadItem(ulong gameId, ulong itemId, FileInfo steamcmd, DirectoryInfo steamappsFolder, DirectoryInfo directory)
         {
             string currentDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
@@ -195,7 +198,7 @@ namespace SteamWorkshopDownloader
             }
 
             // copy the folder to the directory
-            string path = Path.Combine(currentDirectory, "steamapps", "workshop", "content", gameId.ToString(), itemId.ToString());
+            string path = Path.Combine(steamappsFolder.FullName, "steamapps", "workshop", "content", gameId.ToString(), itemId.ToString());
 
             if (Directory.Exists(directory.FullName))
             {
