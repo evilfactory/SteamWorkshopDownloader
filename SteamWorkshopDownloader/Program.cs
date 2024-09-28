@@ -123,7 +123,7 @@ namespace SteamWorkshopDownloader
                 collection = collection.Split("?id=")[1];
             }
 
-            Logger.Log($"Downloading collection {collection}.");
+            Logger.Log($"Downloading collection {collection}.", ConsoleColor.Cyan);
 
             var values = new Dictionary<string, string>
             {
@@ -157,11 +157,9 @@ namespace SteamWorkshopDownloader
             {
                 try 
                 {
-                    Logger.Log($"Starting to download {itemIds[i]}.");
                     Logger.Log("");
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Logger.Log($"Starting to download {itemIds[i]}.", ConsoleColor.Cyan);
                     await DownloadItem(gameId, itemIds[i], steamcmd, steamappsFolder, new DirectoryInfo(Path.Combine(outputDirectory.FullName, itemIds[i].ToString())));
-                    Console.ResetColor();
                     Logger.Log("");
                 }
                 catch (Exception exception)
