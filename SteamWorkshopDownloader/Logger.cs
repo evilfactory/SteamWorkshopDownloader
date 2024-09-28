@@ -12,7 +12,7 @@ namespace Luatrauma.AutoUpdater
         {
             Console.ForegroundColor = color;
             Console.WriteLine(message);
-            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.ResetColor();
         }
     }
 }
