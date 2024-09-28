@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Xml;
+using Luatrauma.AutoUpdater;
 using Newtonsoft.Json.Linq;
 
 namespace SteamWorkshopDownloader
@@ -107,7 +108,7 @@ namespace SteamWorkshopDownloader
 
                 node.AppendChild(package);
 
-                Console.WriteLine($"Added {packagePath} to the {configPlayer}");
+                Logger.Log($"Added {packagePath} to the {configPlayer}");
             }
 
             // save to the file
@@ -121,6 +122,8 @@ namespace SteamWorkshopDownloader
                 // Grab the ID from the URL after ?id=
                 collection = collection.Split("?id=")[1];
             }
+
+            Logger.Log($"Downloading collection {collection}.");
 
             var values = new Dictionary<string, string>
             {
@@ -154,11 +157,16 @@ namespace SteamWorkshopDownloader
             {
                 try 
                 {
+                    Logger.Log($"Starting to download {itemIds[i]}.");
+                    Logger.Log("");
+                    Console.ForegroundColor = ConsoleColor.Cyan;
                     await DownloadItem(gameId, itemIds[i], steamcmd, steamappsFolder, new DirectoryInfo(Path.Combine(outputDirectory.FullName, itemIds[i].ToString())));
+                    Console.ResetColor();
+                    Logger.Log("");
                 }
                 catch (Exception exception)
                 {
-                    Console.WriteLine(exception.Message);
+                    Logger.Log(exception.Message, ConsoleColor.Red);
                 }
             }
         }
@@ -170,7 +178,7 @@ namespace SteamWorkshopDownloader
             Process process = Process.Start(new ProcessStartInfo
             {
                 FileName = steamcmd.FullName,
-                Arguments = $"+force_install_dir {currentDirectory} +login anonymous +workshop_download_item {gameId} {itemId} +quit"
+                Arguments = $"+force_install_dir {currentDirectory} +login anonymous +workshop_download_item {gameId} {itemId} validate +quit"
             });
 
             bool downloadFailed = false;
