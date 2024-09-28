@@ -48,9 +48,9 @@ jobs:
       - name: Copy Binaries
         run: |
           artifacts_dir="$(realpath -m "$CI_DIR/artifacts")"
-          cp "${artifacts_dir}/win-x64/Luatrauma.AutoUpdater.exe" "${CI_DIR}/Luatrauma.AutoUpdater.win-x64.exe"
-          cp "${artifacts_dir}/linux-x64/Luatrauma.AutoUpdater" "${CI_DIR}/Luatrauma.AutoUpdater.linux-x64"
-          cp "${artifacts_dir}/osx-x64/Luatrauma.AutoUpdater" "${CI_DIR}/Luatrauma.AutoUpdater.osx-x64"
+          cp "${artifacts_dir}/win-x64/SteamWorkshopDownloader.exe" "${CI_DIR}/SteamWorkshopDownloader.exe.win-x64.exe"
+          cp "${artifacts_dir}/linux-x64/SteamWorkshopDownloader" "${CI_DIR}/SteamWorkshopDownloader.exe.linux-x64"
+          cp "${artifacts_dir}/osx-x64/SteamWorkshopDownloader" "${CI_DIR}/SteamWorkshopDownloader.exe.osx-x64"
           ls "${artifacts_dir}"
 
       - name: Publish release
@@ -63,6 +63,6 @@ jobs:
           title: "Automatic build"
           body: "Automatic build"
           files: |
-            ${{ env.CI_DIR }}/Luatrauma.AutoUpdater.win-x64.exe
-            ${{ env.CI_DIR }}/Luatrauma.AutoUpdater.linux-x64
-            ${{ env.CI_DIR }}/Luatrauma.AutoUpdater.osx-x64
+            ${{ env.CI_DIR }}/SteamWorkshopDownloader.exe.win-x64.exe
+            ${{ env.CI_DIR }}/SteamWorkshopDownloader.exe.linux-x64
+            ${{ env.CI_DIR }}/SteamWorkshopDownloader.exe.osx-x64
