@@ -3,6 +3,10 @@
     "SteamWorkshopDownloader": {
       "commandName": "Project",
       "commandLineArgs": "downloadcollection --gameid 602960 --collection https://steamcommunity.com/sharedfiles/filedetails/?id=2854772695 --steamcmdpath \"B:\\Program Files\\steamcmd\\steamcmd.exe\""
+    },
+    "Profile 1": {
+      "commandName": "Project",
+      "commandLineArgs": "btsetconfigplayer --modfolder LocalMods --configplayerfile config_player.xml"
     }
   }
 }

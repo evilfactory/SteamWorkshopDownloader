@@ -1,6 +1,8 @@
 ﻿using System.CommandLine;
 using System.Diagnostics;
 using System.Reflection;
+using System.Xml;
+using System.Xml.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace SteamWorkshopDownloader
@@ -28,18 +30,86 @@ namespace SteamWorkshopDownloader
             var downloadCollectionCommand = new Command("downloadcollection", "Downloads a Steam Collection.")
             {
                 steamCMDPath,
+                collection,
+                gameId,
+                output
             };
+
             rootCommand.AddCommand(downloadCollectionCommand);
-            downloadCollectionCommand.AddOption(collection);
-            downloadCollectionCommand.AddOption(gameId);
-            downloadCollectionCommand.AddOption(output);
+
+            var modFolder = new Option<DirectoryInfo?>(name: "--modfolder", description: "The mod folder directory.");
+            modFolder.IsRequired = true;
+            var configPlayer = new Option<FileInfo?>(name: "--configplayerfile", description: "The config player file.");
+            configPlayer.IsRequired = true;
+
+            var btSetConfigPlayer = new Command("btsetconfigplayer", "Goes through every single mod in the specified folder and adds them to the config_player.xml.")
+            {
+                modFolder,
+                configPlayer
+            };
+
+            rootCommand.AddCommand(btSetConfigPlayer);
+
 
             downloadCollectionCommand.SetHandler(async (FileInfo? steamcmd, ulong gameId, string collection, DirectoryInfo? outputDirectory) =>
             {
                 await DownloadCollection(steamcmd, gameId, collection, outputDirectory ?? new DirectoryInfo(Directory.GetCurrentDirectory()));
             }, steamCMDPath, gameId, collection, output);
 
+            btSetConfigPlayer.SetHandler(async (DirectoryInfo? modFolder, FileInfo? configPlayer) =>
+            {
+                if (!modFolder.Exists || !configPlayer.Exists) { return; }
+
+                await BTSetConfigPlayer(modFolder, configPlayer);
+            }, modFolder, configPlayer);
+
             return await rootCommand.InvokeAsync(args);
+        }
+
+        public static async Task BTSetConfigPlayer(DirectoryInfo modFolder, FileInfo configPlayer)
+        {
+            List<string> packagePaths = new List<string>();
+
+            // Scan the modFolder for all the mods
+            DirectoryInfo[] modFolders = modFolder.GetDirectories();
+
+            for (int i = 0; i < modFolders.Length; i++)
+            {
+                var folder = modFolders[i];
+
+                FileInfo filelist = new FileInfo(Path.Combine(folder.FullName, "filelist.xml"));
+
+                if (!filelist.Exists)
+                {
+                    continue;
+                }
+
+                packagePaths.Add($"LocalMods/{folder.Name}/filelist.xml");
+            }
+
+
+            // parse the configPlayer XML 
+            XmlDocument configPlayerDoc = new XmlDocument();
+            configPlayerDoc.Load(configPlayer.FullName);
+
+            XmlNode node = configPlayerDoc.DocumentElement.SelectSingleNode("contentpackages/regularpackages");
+
+            // clear the regular packages
+            node.RemoveAll();
+
+            // add the new packages
+            foreach (string packagePath in packagePaths)
+            {
+                XmlElement package = configPlayerDoc.CreateElement("package");
+                package.SetAttribute("path", packagePath);
+
+                node.AppendChild(package);
+
+                Console.WriteLine($"Added {packagePath} to the {configPlayer}");
+            }
+
+            // save to the file
+            configPlayerDoc.Save(configPlayer.FullName);
         }
 
         public static async Task DownloadCollection(FileInfo steamcmd, ulong gameId, string collection, DirectoryInfo outputDirectory)
@@ -112,7 +182,6 @@ namespace SteamWorkshopDownloader
                     downloadFailed = true;
                 }
             };
-
 
             await process.WaitForExitAsync();
 
