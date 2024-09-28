@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: Run tests
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        required: true
+        type: string
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.target }}
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@6bd8b7f7774af54e05809fcc5431931b3eb1ddee # v4.0.1
+        with:
+          dotnet-version: |
+            6.0.x
+
+      - name: Run tests
+        continue-on-error: true
+        run: |
+          set +e
+          dotnet test Luatrauma.AutoUpdater.sln -clp:"ErrorsOnly;Summary" --logger "trx;LogFileName=$PWD/test-results.trx"
+          echo "EXITCODE=$?" >> "$GITHUB_ENV"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        with:
+          name: test-results
+          path: test-results.trx
+
+      - name: Set exit code
+        run: exit "$EXITCODE"

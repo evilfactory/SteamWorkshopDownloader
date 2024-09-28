@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: On push to a PR
+
+on:
+  pull_request:
+
+jobs:
+  harden-ci-security:
+    uses: ./.github/workflows/harden-ci-security.yml
+    with:
+      target: ${{ github.event.pull_request.head.sha }}
+
+  run-tests-for-pr:
+    uses: ./.github/workflows/run-tests.yml
+    with:
+      target: ${{ github.event.pull_request.head.sha }}

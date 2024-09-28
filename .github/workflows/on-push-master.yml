@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: On push to master branch
+
+on:
+  push:
+    branches: [master]
+    paths-ignore:
+      - ".github/**"
+      - "*.md"
+
+jobs:
+  run-tests:
+    uses: ./.github/workflows/run-tests.yml
+    with:
+      target: ${{ github.event.ref }}
+
+  publish-release:
+    uses: ./.github/workflows/publish-release.yml
+    with:
+      target: ${{ github.event.ref }}
+      tag: latest

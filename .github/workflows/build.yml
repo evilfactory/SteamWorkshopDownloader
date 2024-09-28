@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: Build
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      target:
+        required: true
+        type: string
+
+env:
+  CI_DIR: 717a3c49-f5dc-42eb-b332-fcf2988d00e3
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          ref: ${{ inputs.target }}
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@6bd8b7f7774af54e05809fcc5431931b3eb1ddee # v4.0.1
+        with:
+          dotnet-version: |
+            6.0.x
+
+      - name: Run deploy script
+        run: |
+          cd Deploy
+          chmod +x DeployAll.sh
+          ./DeployAll.sh
+
+      - name: Create tarball
+        run: |
+          mkdir -p "$CI_DIR"
+          tar -czf "$CI_DIR/build.tar.gz" -C Deploy/bin .
+
+      - name: Upload tarball
+        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        with:
+          name: build
+          path: ${{ env.CI_DIR }}/build.tar.gz
