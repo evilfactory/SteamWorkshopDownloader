@@ -13,8 +13,6 @@ namespace Luatrauma.AutoUpdater
             Console.ForegroundColor = color;
             Console.WriteLine(message);
             Console.ForegroundColor = ConsoleColor.Gray;
-
-            File.AppendAllText("Luatrauma.AutoUpdater.Temp/log.txt", message + Environment.NewLine);
         }
     }
 }
