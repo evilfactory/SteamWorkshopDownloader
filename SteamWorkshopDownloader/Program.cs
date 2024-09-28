@@ -1,9 +1,6 @@
 ﻿using System.CommandLine;
-using System.CommandLine.Invocation;
 using System.Diagnostics;
-using System.IO;
 using System.Reflection;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace SteamWorkshopDownloader
