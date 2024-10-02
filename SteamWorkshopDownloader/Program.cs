@@ -153,18 +153,33 @@ namespace SteamWorkshopDownloader
                 }
             }
 
-            for (int i = 0; i < itemIds.Count; i++)
+            async Task<bool> tryDownload(ulong itemId)
             {
-                try 
+                try
                 {
-                    Logger.Log("");
-                    Logger.Log($"Starting to download {itemIds[i]}.", ConsoleColor.Cyan);
-                    await DownloadItem(gameId, itemIds[i], steamcmd, steamappsFolder, new DirectoryInfo(Path.Combine(outputDirectory.FullName, itemIds[i].ToString())));
-                    Logger.Log("");
+                    await DownloadItem(gameId, itemId, steamcmd, steamappsFolder, new DirectoryInfo(Path.Combine(outputDirectory.FullName, itemId.ToString())));
+                    return true;
                 }
                 catch (Exception exception)
                 {
-                    Logger.Log(exception.Message, ConsoleColor.Red);
+                    Logger.Log($"Failed to download {itemId} with exception {exception.Message}.", ConsoleColor.Red);
+                    return false;
+                }
+            }
+
+            for (int i = 0; i < itemIds.Count; i++)
+            {
+                Logger.Log("");
+                Logger.Log($"Starting to download {itemIds[i]}.", ConsoleColor.Cyan);
+
+                if (await tryDownload(itemIds[i]))
+                {
+                    Logger.Log("");
+                }
+                else
+                {
+                    Logger.Log($"Failed to download {itemIds[i]},\ntrying again...", ConsoleColor.Red);
+                    await tryDownload(itemIds[i]);
                 }
             }
         }
@@ -176,20 +191,24 @@ namespace SteamWorkshopDownloader
             Process process = Process.Start(new ProcessStartInfo
             {
                 FileName = steamcmd.FullName,
-                Arguments = $"+force_install_dir {currentDirectory} +login anonymous +workshop_download_item {gameId} {itemId} validate +quit"
+                Arguments = $"+force_install_dir {currentDirectory} +login anonymous +workshop_download_item {gameId} {itemId} validate +quit",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true
             });
 
             bool downloadFailed = false;
 
-            process.OutputDataReceived += (sender, e) =>
+            while (!process.StandardOutput.EndOfStream)
             {
-                if (e.Data == null) { return; }
-                
-                if (e.Data.Contains("ERROR!"))
+                string line = process.StandardOutput.ReadLine();
+                Logger.Log(line);
+
+                if (line.Contains("ERROR!"))
                 {
                     downloadFailed = true;
                 }
-            };
+            }
 
             await process.WaitForExitAsync();
 
