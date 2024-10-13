@@ -11,6 +11,33 @@ namespace SteamWorkshopDownloader
     {
         private static readonly HttpClient client = new HttpClient();
 
+        static void CopyDirectory(string sourceDir, string destinationDir, bool recursive)
+        {
+            var dir = new DirectoryInfo(sourceDir);
+
+            if (!dir.Exists)
+                throw new DirectoryNotFoundException($"Source directory not found: {dir.FullName}");
+
+            DirectoryInfo[] dirs = dir.GetDirectories();
+
+            Directory.CreateDirectory(destinationDir);
+
+            foreach (FileInfo file in dir.GetFiles())
+            {
+                string targetFilePath = Path.Combine(destinationDir, file.Name);
+                file.CopyTo(targetFilePath);
+            }
+
+            if (recursive)
+            {
+                foreach (DirectoryInfo subDir in dirs)
+                {
+                    string newDestinationDir = Path.Combine(destinationDir, subDir.Name);
+                    CopyDirectory(subDir.FullName, newDestinationDir, true);
+                }
+            }
+        }
+
         static async Task<int> Main(string[] args)
         {
             var rootCommand = new RootCommand("Steam Workshop Downloader");
@@ -21,7 +48,7 @@ namespace SteamWorkshopDownloader
             var steamappsFolder = new Option<DirectoryInfo?>(name: "--steamappsfolder", description: "The SteamApps folder.");
             steamappsFolder.IsRequired = true;
 
-            var gameId = new Option<ulong>(name: "--gameid", description: "The Steam Game ID.");
+            var gameId = new Option<string>(name: "--gameid", description: "The Steam Game ID.");
             gameId.IsRequired = true;
 
             var output = new Option<DirectoryInfo?>(name: "--output", description: "The output directory.");
@@ -54,7 +81,7 @@ namespace SteamWorkshopDownloader
             rootCommand.AddCommand(btSetConfigPlayer);
 
 
-            downloadCollectionCommand.SetHandler(async (FileInfo? steamcmd, DirectoryInfo? steamappsFolder, ulong gameId, string collection, DirectoryInfo? outputDirectory) =>
+            downloadCollectionCommand.SetHandler(async (FileInfo? steamcmd, DirectoryInfo? steamappsFolder, string gameId, string collection, DirectoryInfo? outputDirectory) =>
             {
                 await DownloadCollection(steamcmd, steamappsFolder, gameId, collection, outputDirectory ?? new DirectoryInfo(Directory.GetCurrentDirectory()));
             }, steamCMDPath, steamappsFolder, gameId, collection, output);
@@ -115,7 +142,7 @@ namespace SteamWorkshopDownloader
             configPlayerDoc.Save(configPlayer.FullName);
         }
 
-        public static async Task DownloadCollection(FileInfo steamcmd, DirectoryInfo steamappsFolder, ulong gameId, string collection, DirectoryInfo outputDirectory)
+        public static async Task DownloadCollection(FileInfo steamcmd, DirectoryInfo steamappsFolder, string gameId, string collection, DirectoryInfo outputDirectory)
         {
             if (collection.StartsWith("https://"))
             {
@@ -139,7 +166,7 @@ namespace SteamWorkshopDownloader
 
             IList<JToken> results = collectionJson["response"]["collectiondetails"].Children().ToList();
 
-            List<ulong> itemIds = new List<ulong>();
+            List<string> itemIds = new List<string>();
 
             foreach (JToken result in results)
             {
@@ -149,11 +176,11 @@ namespace SteamWorkshopDownloader
                 {
                     string id = item["publishedfileid"].ToString();
 
-                    itemIds.Add(ulong.Parse(id));
+                    itemIds.Add(id);
                 }
             }
 
-            async Task<bool> tryDownload(ulong itemId)
+            async Task<bool> tryDownload(string itemId)
             {
                 try
                 {
@@ -172,29 +199,32 @@ namespace SteamWorkshopDownloader
                 Logger.Log("");
                 Logger.Log($"Starting to download {itemIds[i]}.", ConsoleColor.Cyan);
 
-                if (await tryDownload(itemIds[i]))
+                for (int j = 0; j < 3; j++)
                 {
-                    Logger.Log("");
-                }
-                else
-                {
-                    Logger.Log($"Failed to download {itemIds[i]},\ntrying again...", ConsoleColor.Red);
-                    await tryDownload(itemIds[i]);
+                    if (await tryDownload(itemIds[i]))
+                    {
+                        Logger.Log("");
+                        break;
+                    }
+                    else
+                    {
+                        Logger.Log($"Failed to download {itemIds[i]},\ntrying again...", ConsoleColor.Red);
+                        await tryDownload(itemIds[i]);
+                    }
                 }
             }
         }
 
-        public static async Task DownloadItem(ulong gameId, ulong itemId, FileInfo steamcmd, DirectoryInfo steamappsFolder, DirectoryInfo directory)
+        public static async Task DownloadItem(string gameId, string itemId, FileInfo steamcmd, DirectoryInfo steamappsFolder, DirectoryInfo directory)
         {
             string currentDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
             Process process = Process.Start(new ProcessStartInfo
             {
                 FileName = steamcmd.FullName,
-                Arguments = $"+force_install_dir {currentDirectory} +login anonymous +workshop_download_item {gameId} {itemId} validate +quit",
+                Arguments = $"+login anonymous +workshop_download_item {gameId} {itemId} validate +quit",
                 UseShellExecute = false,
-                RedirectStandardOutput = true,
-                CreateNoWindow = true
+                RedirectStandardOutput = true
             });
 
             bool downloadFailed = false;
@@ -230,7 +260,7 @@ namespace SteamWorkshopDownloader
                 Directory.Delete(directory.FullName, true);
             }
 
-            Directory.Move(path, Path.Combine(directory.FullName));
+            CopyDirectory(path, Path.Combine(directory.FullName), true);
         }
     }
 }
