@@ -80,7 +80,7 @@ namespace SteamWorkshopDownloader
 
             rootCommand.AddCommand(btSetConfigPlayer);
 
-            var btSetConfigFromCollection = new Command("btsetconfigplayer", "Retrieves the collection and adds only the mods present in the collection to config_player_xml, in order.")
+            var btSetConfigFromCollection = new Command("btsetconfigfromcollection", "Retrieves the collection and adds only the mods present in the collection to config_player_xml, in order.")
             {
                 collection,
                 configPlayer
