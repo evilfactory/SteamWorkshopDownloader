@@ -111,6 +111,14 @@ namespace SteamWorkshopDownloader
 
         public static async Task BTSetConfigFromCollection(string collection, FileInfo configPlayer)
         {
+            if (collection.StartsWith("https://"))
+            {
+                // Grab the ID from the URL after ?id=
+                collection = collection.Split("?id=")[1];
+            }
+
+            Logger.Log($"Retrieving collection {collection}.", ConsoleColor.Cyan);
+
             var values = new Dictionary<string, string>
             {
                 { "collectioncount", "1" },
