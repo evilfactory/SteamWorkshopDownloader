@@ -80,6 +80,13 @@ namespace SteamWorkshopDownloader
 
             rootCommand.AddCommand(btSetConfigPlayer);
 
+            var btSetConfigFromCollection = new Command("btsetconfigplayer", "Retrieves the collection and adds only the mods present in the collection to config_player_xml, in order.")
+            {
+                collection,
+                configPlayer
+            };
+
+            rootCommand.AddCommand(btSetConfigFromCollection);
 
             downloadCollectionCommand.SetHandler(async (FileInfo? steamcmd, DirectoryInfo? steamappsFolder, string gameId, string collection, DirectoryInfo? outputDirectory) =>
             {
@@ -93,7 +100,67 @@ namespace SteamWorkshopDownloader
                 await BTSetConfigPlayer(modFolder, configPlayer);
             }, modFolder, configPlayer);
 
+            btSetConfigFromCollection.SetHandler(async (string collection, FileInfo? configPlayer) =>
+            {
+                if (!configPlayer.Exists) { return; }
+                await BTSetConfigFromCollection(collection, configPlayer);
+            }, collection, configPlayer);
+
             return await rootCommand.InvokeAsync(args);
+        }
+
+        public static async Task BTSetConfigFromCollection(string collection, FileInfo configPlayer)
+        {
+            var values = new Dictionary<string, string>
+            {
+                { "collectioncount", "1" },
+                { "publishedfileids[0]", collection }
+            };
+
+            var content = new FormUrlEncodedContent(values);
+            var response = await client.PostAsync("https://api.steampowered.com/ISteamRemoteStorage/GetCollectionDetails/v1/", content);
+            var responseString = await response.Content.ReadAsStringAsync();
+
+            JObject collectionJson = JObject.Parse(responseString);
+
+            IList<JToken> results = collectionJson["response"]["collectiondetails"].Children().ToList();
+
+            List<string> itemIds = new List<string>();
+
+            foreach (JToken result in results)
+            {
+                IList<JToken> items = result["children"].Children().ToList();
+
+                foreach (JToken item in items)
+                {
+                    string id = item["publishedfileid"].ToString();
+
+                    itemIds.Add(id);
+                }
+            }
+
+            // parse the configPlayer XML 
+            XmlDocument configPlayerDoc = new XmlDocument();
+            configPlayerDoc.Load(configPlayer.FullName);
+
+            XmlNode node = configPlayerDoc.DocumentElement.SelectSingleNode("contentpackages/regularpackages");
+
+            // clear the regular packages
+            node.RemoveAll();
+
+            // add the new packages
+            foreach (string itemId in itemIds)
+            {
+                XmlElement package = configPlayerDoc.CreateElement("package");
+                package.SetAttribute("path", $"LocalMods/{itemId}/filelist.xml");
+
+                node.AppendChild(package);
+
+                Logger.Log($"Added {itemId} to the {configPlayer}");
+            }
+
+            // save to the file
+            configPlayerDoc.Save(configPlayer.FullName);
         }
 
         public static async Task BTSetConfigPlayer(DirectoryInfo modFolder, FileInfo configPlayer)
